@@ -1,20 +1,30 @@
-//boiler plate code
-
 package main
 
 import (
-	"email-service/config"
-	"email-service/internal/kafka"
 	"log"
+	"os"
+
+	"github.com/joho/godotenv"
+	"github.com/vithsutra/vithsutra_email_sending_service/consumer"
 )
 
-func main() {
-	// Load Config
-	err := config.LoadConfig()
-	if err != nil {
-		log.Fatal("Failed to load config:", err)
+func init() {
+	serverMode := os.Getenv("SERVER_MODE")
+
+	if serverMode == "dev" {
+		if err := godotenv.Load(); err != nil {
+			log.Fatalln(".env file was missing, failed to load")
+		}
+		return
 	}
 
-	// Start Kafka Consumer
-	kafka.StartConsumer()
+	if serverMode == "prod" {
+		return
+	}
+
+	log.Fatalln("please set SERVER_MODE to dev or prod")
+}
+
+func main() {
+	consumer.Start()
 }
