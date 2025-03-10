@@ -31,6 +31,7 @@ jobs:
     steps:
       - name: Create .env file
         run: |
+          echo "SERVER_MODE=${{ secrets.SERVER_MODE }}" >> .env
           echo "RABBITMQ_URL=${{ secrets.RABBITMQ_URL }}" >> .env
           echo "QUEUE_NAME=${{ secrets.QUEUE_NAME }}" >> .env
           echo "SMTP_HOST=${{ secrets.SMTP_HOST }}" >> .env
