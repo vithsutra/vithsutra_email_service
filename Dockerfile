@@ -14,12 +14,6 @@ FROM alpine:latest
 
 WORKDIR /app
 
-RUN mkdir -p font-family assets
-
-COPY --from=build /app/font-family ./font-family
-
-COPY --from=build /app/assets ./assets
-
 COPY --from=build /app/bin/main .
 
 ENTRYPOINT [ "./main" ]
