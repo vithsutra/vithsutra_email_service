@@ -64,6 +64,7 @@ jobs:
           script: |
             IMAGE_NAME=docker.io/vithsutratechnologies/email-consumer-service:latest
             docker pull $IMAGE_NAME
+            docker images -f "dangling=true" -q | xargs -r docker rmi -f
             docker ps | grep email-consumer-service | awk '{print $1}' | xargs -I {} docker kill {}
             docker ps -a | grep  email-consumer-service  | awk '{print $1}' | xargs -I {} docker rm {}
             docker run -d --name  email-consumer-service  --env-file ~/email-consumer-service/.env $IMAGE_NAME
