@@ -14,6 +14,10 @@ FROM alpine:latest
 
 WORKDIR /app
 
+RUN mkdir -p email/templates
+
+COPY --from=build /app/email/templates/otp.html /app/email/templates/welcome.html ./email/templates
+
 COPY --from=build /app/bin/main .
 
 ENTRYPOINT [ "./main" ]
