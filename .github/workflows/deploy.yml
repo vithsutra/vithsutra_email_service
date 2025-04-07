@@ -24,7 +24,7 @@ jobs:
           docker push $IMAGE_NAME
 
   deploy:
-    name: Deploy Docker Image to GCE
+    name: Deploy Docker Image to Cloud Instance
     runs-on: ubuntu-latest
     needs: build
 
@@ -39,32 +39,32 @@ jobs:
           echo "ROOT_EMAIL=${{ secrets.ROOT_EMAIL }}" >> .env
           echo "ROOT_EMAIL_PASSWORD=${{ secrets.ROOT_EMAIL_PASSWORD }}" >> .env
 
-      - name: Setup Deploy Environment in GCE Instance
+      - name: Setup Deploy Environment in Cloud Instance
         uses: appleboy/ssh-action@v0.1.10
         with:
-          host: "${{ secrets.GCP_INSTANCE_HOST }}"
-          username: "${{ secrets.GCP_INSTANCE_USERNAME }}"
-          key: "${{ secrets.GCE_SSH_PRIVATE_KEY }}"
+          host: "${{ secrets.CLOUD_INSTANCE_HOST }}"
+          username: "${{ secrets.CLOUD_INSTANCE_USERNAME }}"
+          key: "${{ secrets.CLOUD_INSTANCE_SSH_PRIVATE_KEY }}"
           script: |
             echo "Connected to VM"
             mkdir -p ~/email-consumer-service
 
-      - name: Upload .env to GCE Instance
+      - name: Upload .env to Cloud Instance
         run: |
-          echo "${{ secrets.GCE_SSH_PRIVATE_KEY }}" > email_consumer_service_ssh_key
+          echo "${{ secrets.CLOUD_INSTANCE_SSH_PRIVATE_KEY }}" > email_consumer_service_ssh_key
           chmod 600 email_consumer_service_ssh_key
-          scp -o StrictHostKeyChecking=no -i email_consumer_service_ssh_key .env ${{ secrets.GCP_INSTANCE_USERNAME }}@${{ secrets.GCP_INSTANCE_HOST }}:~/email-consumer-service/.env
+          scp -o StrictHostKeyChecking=no -i email_consumer_service_ssh_key .env ${{ secrets.CLOUD_INSTANCE_USERNAME }}@${{ secrets.CLOUD_INSTANCE_HOST }}:~/email-consumer-service/.env
 
-      - name: Deploying Docker Image on GCE Instance
+      - name: Deploying Docker Image on Cloud Instance
         uses: appleboy/ssh-action@v0.1.10
         with:
-          host: "${{ secrets.GCP_INSTANCE_HOST }}"
-          username: "${{ secrets.GCP_INSTANCE_USERNAME }}"
-          key: "${{ secrets.GCE_SSH_PRIVATE_KEY }}"
+          host: "${{ secrets.CLOUD_INSTANCE_HOST }}"
+          username: "${{ secrets.CLOUD_INSTANCE_USERNAME }}"
+          key: "${{ secrets.CLOUD_INSTANCE_SSH_PRIVATE_KEY }}"
           script: |
             IMAGE_NAME=docker.io/vithsutratechnologies/email-consumer-service:latest
             docker pull $IMAGE_NAME
-            docker images -f "dangling=true" -q | xargs -r docker rmi -f
+            docker images | grep "<none>" | awk '{print $3}' | xargs -r docker rmi -f
             docker ps | grep email-consumer-service | awk '{print $1}' | xargs -I {} docker kill {}
             docker ps -a | grep  email-consumer-service  | awk '{print $1}' | xargs -I {} docker rm {}
             docker run -d --name  email-consumer-service  --env-file ~/email-consumer-service/.env $IMAGE_NAME
