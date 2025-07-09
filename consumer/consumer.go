@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 
+	"github.com/streadway/amqp"
 	"github.com/vithsutra/vithsutra_email_sending_service/email"
 	"github.com/vithsutra/vithsutra_email_sending_service/internal/models"
 	"github.com/vithsutra/vithsutra_email_sending_service/queue"
