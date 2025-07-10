@@ -13,28 +13,45 @@ import (
 )
 
 func Start() {
+	redisAddr := os.Getenv("REDIS_ADDRESS")
+	redisPassword := os.Getenv("REDIS_PASSWORD")
+	queueName := os.Getenv("REDIS_QUEUE_NAME")
+
+	log.Println("Connecting to Redis at:", redisAddr)
+	log.Println("Queue Name:", queueName)
 
 	RedisClient := redis.NewClient(&redis.Options{
-		Addr: os.Getenv("REDIS_ADDRESS"),
-		Password: "",
-		DB: 0,
+		Addr:     redisAddr,
+		Password: redisPassword,
+		DB:       0,
 	})
-	log.Println("connected to redis.")
+
+	pong, err := RedisClient.Ping(context.Background()).Result()
+	if err != nil {
+		log.Fatalf("Redis connection failed: %v", err)
+	}
+	log.Println("Redis PING response:", pong)
 
 	for {
-		result, err := RedisClient.BRPop(context.Background(), 10*time.Second, os.Getenv("REDIS_QUEUE_NAME")).Result()
+		result, err := RedisClient.BRPop(context.Background(), 10*time.Second, queueName).Result()
 		if err == redis.Nil {
-			continue 
+			continue
 		} else if err != nil {
-			log.Println("redis BRPOP error:", err)
+			log.Println("Redis BRPOP error:", err)
+			continue
+		}
+
+		if len(result) < 2 {
+			log.Println("Invalid BRPOP result:", result)
 			continue
 		}
 
 		message := result[1]
+		log.Println("Raw message received:", message)
 
 		emailRequest := new(models.Email)
 		if err := json.Unmarshal([]byte(message), emailRequest); err != nil {
-			log.Println("error decoding json message:", err)
+			log.Println("Error decoding JSON:", err)
 			continue
 		}
 
