@@ -16,7 +16,7 @@ func Start() {
 
 	RedisClient := redis.NewClient(&redis.Options{
 		Addr: os.Getenv("REDIS_ADDRESS"),
-		Password: os.Getenv("REDIS_PASSWORD"),
+		Password: "",
 		DB: 0,
 	})
 	log.Println("connected to redis.")
