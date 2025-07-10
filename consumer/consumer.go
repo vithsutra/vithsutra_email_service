@@ -1,73 +1,67 @@
 package consumer
 
 import (
+	"context"
 	"encoding/json"
 	"log"
+	"os"
+	"time"
 
-	"github.com/streadway/amqp"
+	"github.com/redis/go-redis/v9"
 	"github.com/vithsutra/vithsutra_email_sending_service/email"
 	"github.com/vithsutra/vithsutra_email_sending_service/internal/models"
-	"github.com/vithsutra/vithsutra_email_sending_service/queue"
 )
 
 func Start() {
-	conn, channel, queue := queue.Connect()
 
-	defer conn.Close()
-	defer channel.Close()
+	RedisClient := redis.NewClient(&redis.Options{
+		Addr: os.Getenv("REDIS_ADDRESS"),
+		Password: os.Getenv("REDIS_PASSWORD"),
+		DB: 0,
+	})
+	log.Println("connected to redis.")
 
-	messages, err := channel.Consume(
-		queue.Name,
-		"email-consumer-1",
-		false,
-		false,
-		false,
-		false,
-		nil,
-	)
+	for {
+		result, err := RedisClient.BRPop(context.Background(), 10*time.Second, os.Getenv("REDIS_QUEUE_NAME")).Result()
+		if err == redis.Nil {
+			continue 
+		} else if err != nil {
+			log.Println("redis BRPOP error:", err)
+			continue
+		}
 
-	if err != nil {
-		log.Fatalln("error occurred while connecing to queue, Error: ", err.Error())
-	}
+		message := result[1]
 
-	log.Println("message service started succuessfully..")
-
-	for message := range messages {
 		emailRequest := new(models.Email)
-
-		if err := json.Unmarshal(message.Body, emailRequest); err != nil {
-			log.Println("error occurred while decoding the json messaage, Error: ", err.Error())
-			message.Ack(false)
+		if err := json.Unmarshal([]byte(message), emailRequest); err != nil {
+			log.Println("error decoding json message:", err)
 			continue
 		}
 
 		switch emailRequest.EmailType {
 		case "otp":
-			handleWithRetry(message, email.SendOtpEmail, emailRequest)
+			handleWithRetry(email.SendOtpEmail, emailRequest)
 		case "welcome":
-			handleWithRetry(message, email.WelcomeEmail, emailRequest)
+			handleWithRetry(email.WelcomeEmail, emailRequest)
 		default:
 			log.Println("Invalid email type received:", emailRequest.EmailType)
-			message.Ack(false)
 		}
 	}
 }
 
-func handleWithRetry(message amqp.Delivery, sendFunc func(*models.Email) error, emailRequest *models.Email) {
+func handleWithRetry(sendFunc func(*models.Email) error, emailRequest *models.Email) {
 	const maxRetries = 3
 
 	for i := 0; i < maxRetries; i++ {
 		if err := sendFunc(emailRequest); err == nil {
 			log.Printf("[%s] Email sent to: %s", emailRequest.EmailType, emailRequest.To)
-			message.Ack(false)
 			return
 		} else {
 			log.Printf("[%s] Retry %d/%d failed for: %s, Error: %v",
 				emailRequest.EmailType, i+1, maxRetries, emailRequest.To, err)
+			time.Sleep(2 * time.Second)
 		}
 	}
 
 	log.Printf("[%s] Email failed after %d retries: %s", emailRequest.EmailType, maxRetries, emailRequest.To)
-	message.Nack(false, false)
 }
-
