@@ -32,8 +32,8 @@ jobs:
       - name: Create .env file
         run: |
           echo "SERVER_MODE=${{ secrets.SERVER_MODE }}" >> .env
-          echo "RABBITMQ_URL=${{ secrets.RABBITMQ_URL }}" >> .env
-          echo "QUEUE_NAME=${{ secrets.QUEUE_NAME }}" >> .env
+          echo "REDIS_ADDRESS=${{ secrets.REDIS_ADDRESS }}" >> .env
+          echo "REDIS_QUEUE_NAME=${{ secrets.REDIS_QUEUE_NAME }}" >> .env
           echo "SMTP_HOST=${{ secrets.SMTP_HOST }}" >> .env
           echo "SMTP_PORT=${{ secrets.SMTP_PORT }}" >> .env
           echo "ROOT_EMAIL=${{ secrets.ROOT_EMAIL }}" >> .env
